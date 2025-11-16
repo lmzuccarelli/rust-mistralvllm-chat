@@ -86,6 +86,6 @@ cargo build --release --features cuda,cudnn,flash-attn
 ./target/release/rust-mistralvllm-chat --config/config.json
 ```
 
-## Acknowledment
+## Acknowledgement
 
 [mistral.rs](https://github.com/EricLBuehler/mistral.rs)
