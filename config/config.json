@@ -2,9 +2,9 @@
   "kind": "ChatClient",
   "apiVersion": "v1alpha1",
   "spec": {
-    "model": "meta-llama/Llama-3.2-1B-Instruct",
+    "model": "meta-llama/Llama-3.2-3B-Instruct",
     "block_size": 32,
-    "context_size": 2048,
+    "context_size": 4096,
     "isq": "Q8_0",
     "system_message": "You are an AI agent with a assist the user in a polite but detailed manner."
   }

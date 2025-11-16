@@ -6,12 +6,14 @@ use mistralrs::{
     IsqType, MemoryGpuConfig, PagedAttentionMetaBuilder, PagedCacheType, TextMessageRole,
     TextMessages, TextModelBuilder,
 };
+use prompt::parser::PromptParser;
 use std::fs;
 use std::io;
 use std::io::Write;
 use std::str::FromStr;
 
 mod cli;
+mod prompt;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -28,12 +30,15 @@ async fn main() -> Result<()> {
     log::info!("[main] application : {}", env!("CARGO_PKG_NAME"));
     log::info!("[main] author      : {}", env!("CARGO_PKG_AUTHORS"));
     log::info!("[main] version     : {}", env!("CARGO_PKG_VERSION"));
-    println!();
     log::info!("[main] using mistral.rs paged attention (vLLM) for Rust");
     log::info!("[main] welcome!! input your question at the prompt");
     println!();
     log::info!("menu :");
     log::info!("     : type 'exit' to quit");
+    log::info!("     : type 'save <file-name>' to save current content (from response)");
+    log::info!(
+        "     : type 'read open <folder> <search-file-name> close' to read content from a file"
+    );
     println!();
 
     let isq = match cfg.spec.isq.as_str() {
@@ -73,6 +78,9 @@ async fn main() -> Result<()> {
         .build()
         .await?;
 
+    let mut response = String::new();
+    let mut include = String::new();
+
     loop {
         print!("prompt> ");
         io::stdout().flush()?;
@@ -85,20 +93,71 @@ async fn main() -> Result<()> {
             continue;
         }
 
-        if input == "exit" {
-            println!("[main] exiting session");
-            break;
+        match input.clone() {
+            x if x.contains("exit") => {
+                log::warn!("[main] exiting session");
+                break;
+            }
+            x if x.contains("save") => {
+                if response.len() > 0 {
+                    let file_name = format!("documents/{}.md", input.split(" ").nth(1).unwrap());
+                    fs::write(file_name.clone(), &response)?;
+                    log::info!("[main] contents successfully saved to file {}", file_name);
+                }
+                continue;
+            }
+            x if x.contains("read") => {
+                let res_file_name = PromptParser::parse(input.clone());
+                match res_file_name {
+                    Ok(file_name) => {
+                        if !file_name.contains("none") {
+                            let res = fs::read_to_string(&file_name);
+                            match res {
+                                Ok(contents) => {
+                                    include = contents;
+                                    log::info!(
+                                        "[main] successfully read contents from  file {}",
+                                        file_name
+                                    );
+                                    continue;
+                                }
+                                Err(err) => {
+                                    log::error!("{}", err.to_string());
+                                    continue;
+                                }
+                            }
+                        } else {
+                            continue;
+                        }
+                    }
+                    Err(err) => {
+                        log::warn!("[main] {}", err.to_string());
+                        continue;
+                    }
+                }
+            }
+            _ => {}
         }
+
+        let tm = match include.len() {
+            0 => {
+                format!("{}", input.clone())
+            }
+            _ => {
+                format!("{} {}", input.clone(), include)
+            }
+        };
 
         let messages = TextMessages::new()
             .add_message(TextMessageRole::System, cfg.spec.system_message.clone())
-            .add_message(TextMessageRole::User, input.clone());
+            .add_message(TextMessageRole::User, tm);
 
-        let response = model.send_chat_request(messages).await?;
-        println!("{}", response.choices[0].message.content.as_ref().unwrap());
+        let ccr = model.send_chat_request(messages.clone()).await?;
+        response = format!("{}", ccr.choices[0].message.content.as_ref().unwrap());
+        println!("{}", response);
         dbg!(
-            response.usage.avg_prompt_tok_per_sec,
-            response.usage.avg_compl_tok_per_sec
+            ccr.usage.avg_prompt_tok_per_sec,
+            ccr.usage.avg_compl_tok_per_sec
         );
         println!();
     }

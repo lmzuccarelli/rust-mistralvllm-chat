@@ -3422,7 +3422,7 @@ dependencies = [
 
 [[package]]
 name = "rust-mistralvllm-chat"
-version = "0.1.1"
+version = "0.2.4"
 dependencies = [
  "anyhow",
  "clap",
@@ -3433,6 +3433,7 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "tokio",
+ "walkdir",
 ]
 
 [[package]]
