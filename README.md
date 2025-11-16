@@ -81,7 +81,9 @@ cd rust-mitsralvllm-chat
 
 cargo build --release --features cuda,cudnn,flash-attn
 
-#execute
+#execute (ensure huggingface token is set)
+
+export HUGGING_FACE_HUB_TOKEN=xxx
 
 ./target/release/rust-mistralvllm-chat --config/config.json
 ```
